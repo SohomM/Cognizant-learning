@@ -193,3 +193,98 @@ RetailInventory/
 │   └── ... (Designer and Snapshot files)
 ```
 
+
+**Lab 4: Inserting Initial Data**
+
+1. Inserting Data in Program.cs
+
+Updating `Program.cs` file in the console application project to include the following code:
+
+```csharp
+using System.Threading.Tasks;
+using RetailInventory.Models;
+using RetailInventory.Data;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        using var context = new AppDbContext();
+
+        var electronics = new Category { Name = "Electronics" };
+        var groceries = new Category { Name = "Groceries" };
+
+        await context.Categories.AddRangeAsync(electronics, groceries);
+
+        var product1 = new Product { Name = "Laptop", Price = 75000, Category = electronics };
+        var product2 = new Product { Name = "Rice Bag", Price = 1200, Category = groceries };
+
+        await context.Products.AddRangeAsync(product1, product2);
+        await context.SaveChangesAsync();
+
+        Console.WriteLine("Data inserted successfully.");
+    }
+}
+```
+
+
+2. Run the Application
+
+Execute the project using the following command:
+
+```bash
+dotnet run
+```
+
+**Expected Console Output:**
+
+```
+Data inserted successfully.
+```
+
+3. Verify in SQL Server
+
+Open **SQL Server Management Studio (SSMS)** or **Azure Data Studio**, then:
+
+* Connect to the `RetailInventoryDb` database
+* Run the following SQL queries:
+
+```sql
+SELECT * FROM Categories;
+SELECT * FROM Products;
+```
+
+**Expected Data:**
+
+Categories Table
+
+| Id | Name        |
+| -- | ----------- |
+| 1  | Electronics |
+| 2  | Groceries   |
+
+Products Table
+
+| Id | Name     | Price | CategoryId |
+| -- | -------- | ----- | ---------- |
+| 1  | Laptop   | 75000 | 1          |
+| 2  | Rice Bag | 1200  | 2          |
+
+
+
+## Folder and Project Structure
+
+```
+RetailInventory/
+├── Program.cs
+├── Models/
+│   ├── Product.cs
+│   └── Category.cs
+├── Data/
+│   └── AppDbContext.cs
+├── appsettings.json
+├── Migrations/
+│   ├── [timestamp]_InitialCreate.cs
+│   └── ... (EF migration files)
+```
+
