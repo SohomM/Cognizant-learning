@@ -146,4 +146,355 @@ A JSON data obtained like:
 
 
 
-### ---------------------------------------------------------------------------
+### ---------------------------------------------------------------------------------------------
+
+Lab – Web API with Swagger & Postman in .NET Core
+
+## 1. Web API using .NET Core with Swagger
+🔹 Step 1: Create or Open .NET Core Web API Project
+
+Using an existing API project or create a new one:
+
+```bash
+dotnet new webapi -n SwaggerDemoApi
+cd SwaggerDemoApi
+```
+
+🔹 Step 2: Install Swagger Package
+
+Installed **Swashbuckle.AspNetCore** NuGet package:
+
+```bash
+dotnet add package Swashbuckle.AspNetCore
+```
+
+🔹 Step 3: Modify `Startup.cs`
+
+#### In `ConfigureServices` method:
+
+```csharp
+services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Swagger Demo",
+        Version = "v1",
+        Description = "TBD",
+        TermsOfService = new Uri("https://www.example.com"),
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "John Doe",
+            Email = "john@xyzmail.com",
+            Url = new Uri("https://www.example.com")
+        },
+        License = new Microsoft.OpenApi.Models.OpenApiLicense
+        {
+            Name = "License Terms",
+            Url = new Uri("https://www.example.com")
+        }
+    });
+});
+```
+
+#### In `Configure` method:
+
+```csharp
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Swagger Demo");
+});
+```
+
+Make sure to also include:
+
+```csharp
+app.UseRouting();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+});
+```
+
+🔹 Step 4: Run the Application
+
+```bash
+dotnet run
+```
+
+Navigate to:
+
+```
+https://localhost:[port]/swagger
+```
+
+✅ Expected Swagger UI Output:
+
+* Title: Swagger Demo
+* Version: v1
+* Contact: John Doe, [john@xyzmail.com](mailto:john@xyzmail.com)
+* List of all controller methods
+* Click `GET` (ValuesController) → Try it out → Execute → Shows sample response
+
+
+## 2. Test Web API using POSTMAN
+🔹 Step 1: Create a New Controller – EmployeeController.cs
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+public class EmployeeController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult Get()
+    {
+        var employees = new List<string> { "Ram", "Sita", "Lakshman" };
+        return Ok(employees);
+    }
+}
+```
+
+🔹 Step 2: Run the API
+
+```bash
+dotnet run
+```
+
+API URL:
+
+```
+https://localhost:[port]/employee
+```
+
+🔹 Step 3: Use Postman
+
+* Open Postman
+* Set method to `GET`
+* Enter the URL: `https://localhost:[port]/employee`
+* Click **Send**
+
+✅ Expected Output in Postman:
+
+* **Body (JSON):**
+
+```json
+[
+  "Ram",
+  "Sita",
+  "Lakshman"
+]
+```
+
+* **Status:** 200 OK
+
+🔹 Step 4: Modify Route Attribute to `Emp`
+
+Update controller route:
+
+```csharp
+[Route("emp")]
+public class EmployeeController : ControllerBase
+```
+
+Run again and test in Postman:
+
+```
+GET https://localhost:[port]/emp
+```
+
+# ----------------------------------------------------------------------
+Web API – Custom Model, Authorization Filter, and Exception Filter
+
+
+## 1. Web API using Custom Model Class
+🔹 Step 1: Create Model Classes
+
+**Models/Department.cs**
+
+```csharp
+public class Department
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+```
+
+**Models/Skill.cs**
+
+```csharp
+public class Skill
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+```
+
+**Models/Employee.cs**
+
+```csharp
+public class Employee
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public int Salary { get; set; }
+    public bool Permanent { get; set; }
+    public Department Department { get; set; }
+    public List<Skill> Skills { get; set; }
+    public DateTime DateOfBirth { get; set; }
+}
+```
+
+🔹 Step 2: Create Controller
+
+**Controllers/EmployeeController.cs**
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using SwaggerDemoApi.Models;
+using SwaggerDemoApi.Filters;
+
+[ApiController]
+[Route("[controller]")]
+[TypeFilter(typeof(CustomAuthFilter))]
+[TypeFilter(typeof(CustomExceptionFilter))]
+public class EmployeeController : ControllerBase
+{
+    private List<Employee> GetStandardEmployeeList()
+    {
+        return new List<Employee>
+        {
+            new Employee
+            {
+                Id = 1,
+                Name = "John",
+                Salary = 50000,
+                Permanent = true,
+                Department = new Department { Id = 1, Name = "HR" },
+                Skills = new List<Skill> { new Skill { Id = 1, Name = "C#" }, new Skill { Id = 2, Name = "SQL" } },
+                DateOfBirth = new DateTime(1990, 01, 01)
+            }
+        };
+    }
+
+    [HttpGet("standard")]
+    public ActionResult<Employee> GetStandard()
+    {
+        var emp = GetStandardEmployeeList().FirstOrDefault();
+        return Ok(emp);
+    }
+
+    [HttpGet]
+    [ProducesResponseType(typeof(List<Employee>), 200)]
+    [ProducesResponseType(500)]
+    public ActionResult<List<Employee>> Get()
+    {
+        throw new Exception("This is a test exception");
+        // return Ok(GetStandardEmployeeList());
+    }
+
+    [HttpPost]
+    public IActionResult Post([FromBody] Employee emp)
+    {
+        return Ok(emp);
+    }
+
+    [HttpPut("{id}")]
+    public IActionResult Put(int id, [FromBody] Employee emp)
+    {
+        return Ok(emp);
+    }
+}
+```
+
+
+## 2. Custom Action Filter for Authorization
+🔹 Step 1: Create Filter
+
+**Filters/CustomAuthFilter.cs**
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+
+namespace SwaggerDemoApi.Filters
+{
+    public class CustomAuthFilter : ActionFilterAttribute
+    {
+        public override void OnActionExecuting(ActionExecutingContext context)
+        {
+            if (!context.HttpContext.Request.Headers.TryGetValue("Authorization", out var token))
+            {
+                context.Result = new BadRequestObjectResult("Invalid request - No Auth token");
+                return;
+            }
+
+            if (!token.ToString().Contains("Bearer"))
+            {
+                context.Result = new BadRequestObjectResult("Invalid request - Token present but Bearer unavailable");
+            }
+        }
+    }
+}
+```
+
+
+## 3. Custom Exception Filter
+
+🔹 Step 1: Create Filter
+
+**Filters/CustomExceptionFilter.cs**
+
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+
+namespace SwaggerDemoApi.Filters
+{
+    public class CustomExceptionFilter : IExceptionFilter
+    {
+        public void OnException(ExceptionContext context)
+        {
+            var exception = context.Exception;
+            var logPath = Path.Combine(Directory.GetCurrentDirectory(), "Logs");
+            Directory.CreateDirectory(logPath);
+            var filePath = Path.Combine(logPath, "errorlog.txt");
+            File.AppendAllText(filePath, $"{DateTime.Now} - {exception.Message}{Environment.NewLine}");
+
+            context.Result = new ObjectResult("An unexpected error occurred")
+            {
+                StatusCode = 500
+            };
+        }
+    }
+}
+```
+
+## 4. NuGet Package
+
+Install WebApiCompatShim if not already:
+
+```bash
+dotnet add package Microsoft.AspNet.WebApi.CompatibilityShim
+```
+
+
+## 5. Swagger Test
+
+Run the app:
+
+```bash
+dotnet run
+```
+
+Navigate to:
+
+```
+https://localhost:[port]/swagger
+```
+
+* Observe:
+
+  * GET methods show return types (200 and 500)
+  * Try the GET endpoint → it triggers an exception
+  * Check `Logs/errorlog.txt` for logged exception
+
