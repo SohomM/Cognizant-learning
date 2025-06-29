@@ -288,3 +288,84 @@ RetailInventory/
 │   └── ... (EF migration files)
 ```
 
+
+# Report: EF Core CLI – Lab 5: Retrieving Data from the Database
+
+
+1. Retrieve All Products
+
+Add the following code to `Program.cs` or a new method within your application:
+
+```csharp
+using System;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using RetailInventory.Models;
+using RetailInventory.Data;
+
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        using var context = new AppDbContext();
+
+        // 1. Retrieve all products
+        var products = await context.Products.ToListAsync();
+        foreach (var p in products)
+            Console.WriteLine($"{p.Name} - ₹{p.Price}");
+
+        // 2. Find by ID
+        var product = await context.Products.FindAsync(1);
+        Console.WriteLine($"Found: {product?.Name}");
+
+        // 3. FirstOrDefault with condition
+        var expensive = await context.Products.FirstOrDefaultAsync(p => p.Price > 50000);
+        Console.WriteLine($"Expensive: {expensive?.Name}");
+    }
+}
+```
+
+Ensure your `Product` and `AppDbContext` classes are correctly set up and referenced.
+
+2. Run the Application
+
+Use the .NET CLI to run the console application:
+
+```bash
+dotnet run
+```
+
+**Expected Output:**
+
+```
+Laptop - ₹75000
+Rice Bag - ₹1200
+Found: Laptop
+Expensive: Laptop
+```
+
+3. Explanation of Methods
+
+| Method                  | Description                                                             |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `ToListAsync()`         | Retrieves all entries from the table as a list                          |
+| `FindAsync(id)`         | Searches for a row by its primary key (faster when tracking is enabled) |
+| `FirstOrDefaultAsync()` | Retrieves the first matching record or null if none match the condition |
+
+---
+
+## Folder and Project Structure
+
+```
+RetailInventory/
+├── Program.cs
+├── Models/
+│   ├── Product.cs
+│   └── Category.cs
+├── Data/
+│   └── AppDbContext.cs
+├── appsettings.json
+├── Migrations/
+│   ├── [timestamp]_InitialCreate.cs
+│   └── ...
+```
