@@ -59,3 +59,58 @@ dotnet add package Microsoft.EntityFrameworkCore.Design
 * `Microsoft.EntityFrameworkCore.SqlServer`: Enables EF Core to work with SQL Server databases.
 * `Microsoft.EntityFrameworkCore.Design`: Provides tools for scaffolding, migrations, etc.
 
+Here is the direct and complete answer to **Lab 2: Setting Up the Database Context for a Retail Store**, exactly as per assignment requirements:
+
+ 
+ **Lab 2: Setting Up the Database Context for a Retail Store**
+
+
+1️. **Create Models**
+
+```csharp
+public class Category
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public List<Product> Products { get; set; }
+}
+```
+
+```csharp
+public class Product
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+    public int CategoryId { get; set; }
+    public Category Category { get; set; }
+}
+```
+
+2️. **Create AppDbContext**
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+
+public class AppDbContext : DbContext
+{
+    public DbSet<Product> Products { get; set; }
+    public DbSet<Category> Categories { get; set; }
+
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+    {
+        optionsBuilder.UseSqlServer("Your_Connection_String_Here");
+    }
+}
+```
+
+3️. **Add Connection String in appsettings.json**
+
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Your_Connection_String_Here"
+  }
+}
+```
+
