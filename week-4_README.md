@@ -146,7 +146,7 @@ A JSON data obtained like:
 
 
 
-### ---------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
 
 Lab – Web API with Swagger & Postman in .NET Core
 
@@ -497,4 +497,142 @@ https://localhost:[port]/swagger
   * GET methods show return types (200 and 500)
   * Try the GET endpoint → it triggers an exception
   * Check `Logs/errorlog.txt` for logged exception
+
+# ------------------------------------------------------------------------------
+# Web API CRUD Operation – Update Action Method
+
+## 1. Model: Employee.cs
+
+```csharp
+public class Employee
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public int Salary { get; set; }
+    public bool Permanent { get; set; }
+    public Department Department { get; set; }
+    public List<Skill> Skills { get; set; }
+    public DateTime DateOfBirth { get; set; }
+}
+
+public class Department
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+
+public class Skill
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+}
+```
+
+
+## 2. Controller: EmployeeController.cs
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+public class EmployeeController : ControllerBase
+{
+    private static List<Employee> _employees = new List<Employee>
+    {
+        new Employee
+        {
+            Id = 1,
+            Name = "John",
+            Salary = 50000,
+            Permanent = true,
+            Department = new Department { Id = 1, Name = "HR" },
+            Skills = new List<Skill> { new Skill { Id = 1, Name = "C#" } },
+            DateOfBirth = new DateTime(1990, 01, 01)
+        },
+        new Employee
+        {
+            Id = 2,
+            Name = "Jane",
+            Salary = 60000,
+            Permanent = false,
+            Department = new Department { Id = 2, Name = "Finance" },
+            Skills = new List<Skill> { new Skill { Id = 2, Name = "Excel" } },
+            DateOfBirth = new DateTime(1988, 05, 15)
+        }
+    };
+
+    [HttpPut("{id}")]
+    public ActionResult<Employee> UpdateEmployee(int id, [FromBody] Employee updatedEmp)
+    {
+        if (id <= 0)
+        {
+            return BadRequest("Invalid employee id");
+        }
+
+        var emp = _employees.FirstOrDefault(e => e.Id == id);
+
+        if (emp == null)
+        {
+            return BadRequest("Invalid employee id");
+        }
+
+        // Update hardcoded employee record
+        emp.Name = updatedEmp.Name;
+        emp.Salary = updatedEmp.Salary;
+        emp.Permanent = updatedEmp.Permanent;
+        emp.Department = updatedEmp.Department;
+        emp.Skills = updatedEmp.Skills;
+        emp.DateOfBirth = updatedEmp.DateOfBirth;
+
+        return Ok(emp);
+    }
+}
+```
+
+
+## 3. Test Using Swagger
+
+1. Run the application using:
+
+```bash
+dotnet run
+```
+
+2. Open Swagger UI:
+
+```
+https://localhost:[port]/swagger
+```
+
+3. Expand PUT `/employee/{id}` method.
+4. Clicked **Try it out**, entered a valid id (e.g., 1), and JSON body:
+
+```json
+{
+  "id": 1,
+  "name": "Updated John",
+  "salary": 55000,
+  "permanent": true,
+  "department": {
+    "id": 1,
+    "name": "HR"
+  },
+  "skills": [
+    { "id": 1, "name": "C#" },
+    { "id": 3, "name": "ASP.NET" }
+  ],
+  "dateOfBirth": "1990-01-01"
+}
+```
+
+5. Clicked **Execute**.
+
+✅ Expected Response (Swagger / Postman):
+
+* **Status Code:** `200 OK`
+* **Body:** Updated Employee JSON
+
+If ID is `0` or non-existent, expected:
+
+* **Status Code:** `400 Bad Request`
+* **Message:** `"Invalid employee id"`
 
