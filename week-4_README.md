@@ -636,3 +636,175 @@ If ID is `0` or non-existent, expected:
 * **Status Code:** `400 Bad Request`
 * **Message:** `"Invalid employee id"`
 
+# -----------------------------------------------------------
+
+✅ **1. CORS Enablement for Web API Access**
+
+🔸 What is CORS?
+**Cross-Origin Resource Sharing (CORS)** is a security feature implemented by browsers to prevent unauthorized cross-origin HTTP requests. If a frontend app (like Angular or React) runs on `localhost:4200` and tries to access a Web API on `localhost:5000`, CORS policies determine if this should be allowed.
+
+🔸 How to Enable CORS in ASP.NET Core Web API
+ Install NuGet Package:
+
+```sh
+Install-Package Microsoft.AspNetCore.Cors
+```
+ Update `Startup.cs`
+
+**In `ConfigureServices`:**
+
+```csharp
+services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder =>
+        {
+            builder.AllowAnyOrigin()
+                   .AllowAnyMethod()
+                   .AllowAnyHeader();
+        });
+});
+```
+
+**In `Configure`:**
+
+```csharp
+app.UseCors("AllowAll");
+```
+
+✅ **2. Demonstrate Security in WebAPI (JWT Authentication)**
+
+🔸 JSON Web Token (JWT) Authentication Flow
+
+* User authenticates and gets a JWT from `AuthController`.
+* JWT is sent in the `Authorization` header as `Bearer {token}`.
+* `Authorize` attribute checks for valid token, issuer, audience, and claims.
+
+ Update `Startup.cs` for JWT Authentication
+
+**In `ConfigureServices`:**
+
+```csharp
+string securityKey = "mysuperdupersecret";
+var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(securityKey));
+
+services.AddAuthentication(x =>
+{
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = "mySystem",
+        ValidAudience = "myUsers",
+        IssuerSigningKey = symmetricSecurityKey
+    };
+});
+```
+
+**In `Configure`:**
+
+```csharp
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+ ✅ **3. `AuthController` to Generate JWT**
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+[AllowAnonymous]
+public class AuthController : ControllerBase
+{
+    [HttpGet("generate")]
+    public IActionResult GetToken()
+    {
+        var token = GenerateJSONWebToken(1, "Admin");
+        return Ok(new { token });
+    }
+
+    private string GenerateJSONWebToken(int userId, string userRole)
+    {
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("mysuperdupersecret"));
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.Role, userRole),
+            new Claim("UserId", userId.ToString())
+        };
+
+        var token = new JwtSecurityToken(
+            issuer: "mySystem",
+            audience: "myUsers",
+            claims: claims,
+            expires: DateTime.Now.AddMinutes(10),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+}
+```
+
+✅ **4. `EmployeeController` with Authorization**
+
+```csharp
+[ApiController]
+[Route("[controller]")]
+[Authorize(Roles = "Admin,POC")]
+public class EmployeeController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetEmployees()
+    {
+        return Ok(new { Message = "Authorized - You have access!" });
+    }
+}
+```
+
+✅ **5. Test with Postman**
+
+🔸 Steps:
+
+1. **GET `AuthController/generate`** → Copy the token.
+2. **GET `EmployeeController`** with header:
+
+```
+Key: Authorization
+Value: Bearer <token>
+```
+
+* ✅ Valid token & role → Status **200 OK**
+* ❌ Invalid/expired/missing token → Status **401 Unauthorized**
+
+✅ **6. Check JWT Expiration**
+
+In `GenerateJSONWebToken`, update:
+
+```csharp
+expires: DateTime.Now.AddMinutes(2),
+```
+
+* Wait 2+ minutes, then send GET request.
+* Result: **401 Unauthorized**.
+
+---
+
+✅ **7. Check Role-based Access Control**
+
+### Case 1: `Authorize(Roles = "POC")`, token has `Admin`
+
+* Result: **401 Unauthorized**
+
+### Case 2: `Authorize(Roles = "Admin,POC")`, token has `Admin`
+
+* Result: **200 OK**
+
+
